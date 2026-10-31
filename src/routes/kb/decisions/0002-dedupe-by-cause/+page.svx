@@ -53,6 +53,20 @@ time zones and source events before claiming those cases fixed. Do not invent a 
 confirmed cause or silently remove them from the exported totals.
 </Callout>
 
+## Engineering outcome: 5 October
+
+After the initial tickets were accepted, the course desk published an engineering
+update: #4471 closed on 5 October. The **parser was fixed** by
+`fix(dates): parse dd/mm for eu locales`. The **hint was closed as won't fix**
+because the **booking-v3 form was retired**. These are different outcomes: retiring
+a form does not mean its hint was repaired. Close the parser ticket as completed
+and the hint ticket as not planned, preserving both historical report counts.
+
+Source: the authenticated Challenge page, read 31 October; its update is transcribed
+in `evidence/desk-update.txt`. This is the desk's reported disposition; we have not
+independently tested a production parser deployment. The export remains historical
+evidence, including the five unusual symptoms needing care when interpreting it.
+
 ## Queue history
 
 <QueueTimeline ticket={4471} />
