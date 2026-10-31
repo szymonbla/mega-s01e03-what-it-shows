@@ -1,0 +1,1 @@
+render-parser-row failed: regex required bare td but Svelte adds scoped CSS classes. Preserve actual fragment: th></th></tr></thead><tbody><!--[--><tr class="svelte-12oyimm"><td class="svelte-12oyimm"><code>parser</code></td><td class="svelte-12oyimm">379</td><td class="tags svelte-12oyimm">parser ×356 · hint ×23</td><td class="svelte-12oyimm">11</td><td clas

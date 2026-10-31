@@ -1,0 +1,82 @@
+---
+layout: runbook
+title: '0002 · Split #4471 and merge by demonstrated cause'
+owner: support desk
+status: proposed
+reviewed: '2026-10-31'
+signature: 'Codex (gpt-6.1-sol), harness for szymonbla, S01E03'
+---
+
+<script>
+  import CauseTable from '#lib/kb/CauseTable.svelte';
+  import QueueTimeline from '#lib/kb/QueueTimeline.svelte';
+  import DedupeExplorer from '#lib/kb/DedupeExplorer.svelte';
+  import RenderStamp from '#lib/kb/RenderStamp.svelte';
+  import Callout from '#lib/kb/Callout.svelte';
+</script>
+
+## Context and scope
+
+This proposed decision supersedes [0001](/kb/decisions/0001-dedupe-by-subject).
+The accepted record remains intact. Its subject-only rule can hide different problems
+under one title and split the same problem across different titles.
+The [incident page](/kb/incidents/4471) says “one issue, one fix queued”; its computed
+view shows otherwise. Read computed results before relying on that prose.
+
+This analysis covers the 2026-10-04 export of reports merged into #4471.
+Deduplicate overlapping export pages by report ID, then filter for that ticket.
+Use the tenant directory's locale and booking form, with the report's channel.
+Browser locale and intake tags are guesses, not the cause oracle.
+The table runs the supplied cause rules; counts belong in components.
+
+## Findings and separate engineering tickets
+
+<CauseTable ticket={4471} />
+
+**Parser:** the shared parser reads month first for day-first tenants.
+For example R-41200 (harbour.dental, en-GB, app) describes 7 April becoming 4 July.
+Fix the shared parser to interpret the tenant's date convention consistently.
+Verify ambiguous and unambiguous dates through app and email, and booking-v2 forms.
+A parser repair must not be treated as closing the separate form-hint problem.
+
+**Form hint:** booking-v3 prints MM/DD/YYYY for day-first tenants, while its form
+reads the entry in the tenant's order. This affects form reports from alder.physio,
+copper.studio and pale.harbour. R-41230 is an example even though intake tagged it
+as parser. Make the displayed hint agree with the form's actual tenant-aware parsing;
+verify input, displayed hint and saved date together for each affected tenant.
+
+<Callout kind="warn">
+The footnoted reports describe a one-day move, an invite before booking, or another unusual
+symptom. Their placement follows the supplied tenant-based classifier; it is not proof that
+a month/day parser explains their bodies. Preserve their IDs and investigate timing,
+time zones and source events before claiming those cases fixed. Do not invent a third
+confirmed cause or silently remove them from the exported totals.
+</Callout>
+
+## Queue history
+
+<QueueTimeline ticket={4471} />
+
+The received and merged series measure different events. The July merge spike includes
+older reports; it is not evidence of a July onset or a fix. Reports continue through the
+export cutoff. The export is a snapshot: refresh against the desk before closing work.
+
+## Replacement triage rule
+
+Read the body and identify tenant, locale, form version, channel and reproducible failure.
+Merge only when evidence establishes the same cause. Keep unknown tenants or unclear
+symptoms pending investigation rather than inferring a cause from the subject.
+A shared subject can span causes; different subjects can share a cause.
+The executable examples below demonstrate both boundaries, including the unknown-tenant case.
+
+<DedupeExplorer />
+
+## Consequences and review
+
+Engineering gets a separate ticket and count for each confirmed cause. The desk must
+read and investigate reports, preserve provenance and reconcile counts by ID.
+Recheck the export and unresolved symptoms when new evidence arrives. Review the stale
+triage page and replace its advice through this decision; a recent review date alone
+cannot make unsupported prose true. No fix has been deployed or verified by this analysis.
+
+<RenderStamp {signature} />

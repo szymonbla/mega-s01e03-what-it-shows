@@ -1,0 +1,45 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import { compile } from 'svelte/compiler';
+import { mdsvex } from 'mdsvex';
+import { render } from 'svelte/server';
+import { groupByCause, uniqueById, causeOf, sameCause } from '../src/lib/kb/causes.ts';
+import { deskRef } from '../src/lib/kb/desk-ref.ts';
+const root=process.cwd();
+const data=JSON.parse(fs.readFileSync('src/lib/data/reports-4471.json'));
+const tenants=fs.readdirSync('src/lib/data/tenants').map(f=>JSON.parse(fs.readFileSync('src/lib/data/tenants/'+f)));
+const tenantOf=r=>tenants.find(t=>t.handle===r.tenant);
+const reports=uniqueById(data).filter(r=>r.mergedInto===4471);
+const groups=groupByCause(reports,tenantOf);
+const tests=[];
+function check(id,expected,actual){assert.deepEqual(actual,expected,id);tests.push({id,expected,actual,status:'PASS'});}
+check('unique-ticket-4471',412,reports.length);
+check('cause-counts',{parser:379,hint:33},Object.fromEntries(groups.map(g=>[g.cause,g.reports.length])));
+check('unknown-tenant-not-duplicate',false,sameCause({channel:'email'},undefined,{channel:'email'},undefined));
+check('same-tenant-different-channel',['hint','parser'],['form','app'].map(channel=>causeOf({channel},tenantOf({tenant:'alder.physio'}))));
+check('tag-is-not-cause','hint',causeOf(reports.find(r=>r.id==='R-41230'),tenantOf({tenant:'copper.studio'})));
+fs.mkdirSync('.build',{recursive:true});fs.mkdirSync('rendered',{recursive:true});
+const page='src/routes/kb/decisions/0002-dedupe-by-cause/+page.svx';
+const md=mdsvex({layout:{runbook:path.join(root,'src/lib/layouts/runbook.svelte')}});
+const css=[];
+await build({stdin:{contents:`import Page from './${page}'; export default Page;`,resolveDir:root},bundle:true,platform:'node',format:'esm',outfile:'.build/page.mjs',packages:'external',plugins:[{name:'kb',setup(b){
+ b.onResolve({filter:/^#lib\//},a=>{const name=path.join(root,'src/lib',a.path.slice(5));return {path:fs.existsSync(name)?name:name+'.ts'};});
+ b.onLoad({filter:/\.(svelte|svx)$/},async a=>{let source=fs.readFileSync(a.path,'utf8');if(a.path.endsWith('.svx'))source=(await md.markup({content:source,filename:a.path})).code;const result=compile(source,{filename:a.path,generate:'server',css:'external'});if(result.css)css.push(result.css.code);return {contents:result.js.code,loader:'js'};});
+ b.onLoad({filter:/locales\.ts$/},a=>({contents:fs.readFileSync(a.path,'utf8').replace(/const tenants = Object.values\(import.meta.glob<Tenant>\([\s\S]*?\)\);/,`const tenants: Tenant[] = ${JSON.stringify(tenants)};`),loader:'ts'}));
+}}]});
+const {default:Page}=await import(path.join(root,'.build/page.mjs')+'?'+Date.now());
+const output=render(Page);
+const html=`<!doctype html><html lang="en"><head><meta charset="utf-8">${output.head}<style>${css.join('\n')}</style></head><body>${output.body}</body></html>`;
+fs.writeFileSync('rendered/0002-dedupe-by-cause.html',html);
+const text=html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+check('render-parser-row',true,/<td[^>]*><code>parser<\/code><\/td>\s*<td[^>]*>379<\/td>/.test(html));
+check('render-hint-row',true,/<td[^>]*><code>hint<\/code><\/td>\s*<td[^>]*>33<\/td>/.test(html));
+const signature='Codex (gpt-6.1-sol), harness for szymonbla, S01E03';
+check('rendered-signature',true,text.includes(deskRef(signature)));
+check('all-five-footnotes',true,text.includes('5 reports read as a one-day move'));
+check('dedupe-live-verdict',true,text.includes('different causes — keep apart'));
+fs.writeFileSync('evidence/acceptance.json',JSON.stringify({environment:'local SSR, course export 2026-10-04; not deployed acceptance',candidate:'content in this directory; publication pending',input:{rows:data.length,unique:reports.length,ticket:4471},cases:tests,groups:groups.map(({reports,...g})=>({...g,count:reports.length,ids:reports.map(r=>r.id)}))},null,2));
+for(const g of groups){const title=g.cause==='parser'?'Shared date parser uses month-first order for day-first tenants':'booking-v3 date hint disagrees with tenant date parsing';const examples=g.reports.slice(0,3).map(r=>`- ${r.id}, ${r.tenant}, ${r.channel}: ${r.body}`).join('\n');fs.writeFileSync(`drafts/${g.cause}.md`,`# ${title}\n\nCovers **${g.reports.length} unique reports** merged into #4471 in the 2026-10-04 export, received ${g.firstSeen} through ${g.lastSeen}. Deduplicated by report ID; classified by tenant locale, form version and channel using src/lib/kb/causes.ts, not intake tags or browser locale.\n\n## Evidence\n${examples}\n\n## Expected behavior and repair\n${g.cause==='parser'?'Parse dates consistently with the tenant locale; 07/04/2026 means 7 April for en-GB. Exercise app, email and booking-v2 forms.':'Display a hint matching the tenant-aware form parser. Verify booking-v3 forms for alder.physio, copper.studio and pale.harbour; enter dates using the displayed hint and confirm the saved date.'}\n\nKeep this separate from the ${g.cause==='parser'?'form hint':'shared parser'} repair. Counts and report IDs are in evidence/acceptance.json. ${g.cause==='parser'?'Five footnoted reports have atypical timing or one-day symptoms: R-41202, R-41209, R-41236, R-41344, R-41620. They are classified here by the supplied rules; investigate source events and time zones before claiming a parser fix resolves them.':''}\n\nSee src/routes/kb/decisions/0002-dedupe-by-cause/+page.svx and rendered/0002-dedupe-by-cause.html. Snapshot only; refresh with the desk before closing. No deployed fix is claimed.\n`);}
+console.log(`${tests.length} local acceptance cases passed; rendered/0002-dedupe-by-cause.html; ${deskRef(signature)}`);
