@@ -36,7 +36,7 @@ fs.writeFileSync('rendered/0002-dedupe-by-cause.html',html);
 const text=html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
 check('render-parser-row',true,/<td[^>]*><code>parser<\/code><\/td>\s*<td[^>]*>379<\/td>/.test(html));
 check('render-hint-row',true,/<td[^>]*><code>hint<\/code><\/td>\s*<td[^>]*>33<\/td>/.test(html));
-const signature='Codex (gpt-6.1-sol), harness for szymonbla, S01E03';
+const signature=fs.readFileSync(page,'utf8').match(/^signature: '([^']+)'/m)[1];
 check('rendered-signature',true,text.includes(deskRef(signature)));
 check('all-five-footnotes',true,text.includes('5 reports read as a one-day move'));
 check('dedupe-live-verdict',true,text.includes('different causes — keep apart'));

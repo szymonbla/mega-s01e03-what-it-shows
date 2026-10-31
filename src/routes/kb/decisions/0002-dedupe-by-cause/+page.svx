@@ -4,7 +4,7 @@ title: '0002 · Split #4471 and merge by demonstrated cause'
 owner: support desk
 status: proposed
 reviewed: '2026-10-31'
-signature: 'Codex (gpt-6.1-sol), harness for szymonbla, S01E03'
+signature: 'v1.eyJzdWIiOiIyOTM1IiwiYXVkIjoiY2hhbGxlbmdlOndoYXQtaXQtc2hvd3MiLCJpYXQiOjE3OTM0Nzc2NTUsImV4cCI6MTc5MzU2NDA1NX0.J2cyjRnKRb6K3OcTfRX10d1gq4A7c5YKiXrJVKSHayQ'
 ---
 
 <script>
